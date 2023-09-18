@@ -3,5 +3,8 @@
         "user_data": true,
         "recall":true,
         "sort":false
-    }
+    },
+    "recall_reasons": [
+        "recall_i2i"
+    ]
 }

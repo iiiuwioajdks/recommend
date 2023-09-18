@@ -10,7 +10,8 @@ import (
 )
 
 type Strategy struct {
-	Steps map[string]bool `json:steps`
+	Steps         map[string]bool `json:"steps"`
+	RecallReasons []string        `json:"recall_reasons"`
 }
 
 func LoadStrategy(rc *RequestContext) bool {
@@ -52,5 +53,12 @@ func LoadStrategy(rc *RequestContext) bool {
 			stepFile.Close()
 		}
 	}
+	rc.RecallReasons = make(map[string][]Group)
+	val, _ := json.Marshal(strategy.RecallReasons)
+	logrus.Infof("lmx_test : %s", string(val))
+	for _, reason := range strategy.RecallReasons {
+		rc.RecallReasons[reason] = make([]Group, 0)
+	}
+	rc.RecallReasonNames = strategy.RecallReasons
 	return true
 }

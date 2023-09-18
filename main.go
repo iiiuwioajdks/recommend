@@ -70,7 +70,8 @@ func main() {
 		recall_dag := [][]string{
 			{},
 			{"test_set_group"},
-			{"recall_i2i"},
+			// recall group by diffent method
+			rc.RecallReasonNames,
 			{"merge"},
 		}
 		execute.InitRuleDag(run_step, recall_dag)
