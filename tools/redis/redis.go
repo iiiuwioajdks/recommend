@@ -11,6 +11,7 @@ var (
 )
 
 var (
+	// 用来存储 userprofile 里的用户喜好
 	UserProfileKey = "_user_profile"
 	GroupInfoKey   = "_group"
 	RecallGroupKey = "_recall_group"

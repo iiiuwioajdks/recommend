@@ -2,11 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"os"
 	data "recommend/data"
 	dag_execute "recommend/execute"
 	recall_group_exec "recommend/steps/recall"
 	user_data_exec "recommend/steps/user_data"
+	mysql "recommend/tools/mysql"
 	redis "recommend/tools/redis"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -15,90 +18,77 @@ func print(str string) {
 	println(str)
 }
 
-const user_data_rule = `
-rule "test_set_user"
-begin
-set_user(1)
-end
-
-rule "get_user_profile"
-begin
-get_user_profile(rc, 1)
-end
-`
-
-const recall_rule = `
-rule "test_set_group"
-begin
-set_group(1, "篮球")
-set_group(2, "游戏")
-set_group(3, "游泳")
-set_group(4, "篮球")
-set_group(5, "计算机")
-end
-
-rule "recall_i2i"
-begin
-recall_i2i(rc)
-end
-
-rule "merge"
-begin
-println("run recall merge")
-end
-`
-
-const sort_rule = `
-rule "predict"
-begin
-println("run sort predict")
-end
-`
-
 func main() {
+	start := time.Now()
 	// init
 	redis.CreateRedisClient()
+	mysql.CreateMysqlClient()
 
 	rc := new(data.RequestContext)
+	args := os.Args
+	if len(args) == 2 {
+		rc.Strategy = args[1]
+	} else {
+		rc.Strategy = "test"
+	}
+	// load json
+	succ := data.LoadStrategy(rc)
+	if !succ {
+		logrus.Errorf("Load Strategy %s Error, Exit", rc.Strategy)
+		return
+	}
 
 	execute := new(dag_execute.DAG_EXECUTE)
-	execute.Init(3)
-	user_data_func := map[string]interface{}{
-		"rc":               rc,
-		"println":          print,
-		"set_user":         user_data_exec.TestSetUser,
-		"get_user_profile": user_data_exec.GetUserProfile,
+	run_step := 0
+	execute.Init(rc.StepNum)
+	if rc.Steps["user_data"] {
+		user_data_func := map[string]interface{}{
+			"rc":                    rc,
+			"println":               print,
+			"set_user":              user_data_exec.TestSetUser,
+			"get_user_profile_ua":   user_data_exec.GetUserProfileUA,
+			"get_user_profile_info": user_data_exec.GetUserProfileINFO,
+		}
+		execute.InitRuleBuilder(run_step, rc.StepsRule["user_data"], user_data_func)
+		user_data_dag := [][]string{
+			{},
+			{"test_set_user"},
+			{"get_user_profile_ua", "get_user_profile_info"},
+		}
+		execute.InitRuleDag(run_step, user_data_dag)
+		run_step++
 	}
-	execute.InitRuleBuilder(0, user_data_rule, user_data_func)
-	recall_func := map[string]interface{}{
-		"rc":         rc,
-		"println":    print,
-		"set_group":  recall_group_exec.TetsSetGroup,
-		"recall_i2i": recall_group_exec.GetGroupI2I,
+
+	if rc.Steps["recall"] {
+		recall_func := map[string]interface{}{
+			"rc":         rc,
+			"println":    print,
+			"set_group":  recall_group_exec.TetsSetGroup,
+			"recall_i2i": recall_group_exec.GetGroupI2I,
+		}
+		execute.InitRuleBuilder(run_step, rc.StepsRule["recall"], recall_func)
+		recall_dag := [][]string{
+			{},
+			{"test_set_group"},
+			{"recall_i2i"},
+			{"merge"},
+		}
+		execute.InitRuleDag(run_step, recall_dag)
+		run_step++
 	}
-	execute.InitRuleBuilder(1, recall_rule, recall_func)
-	sort_func := map[string]interface{}{
-		"println": print,
+
+	if rc.Steps["sort"] {
+		sort_func := map[string]interface{}{
+			"println": print,
+		}
+		execute.InitRuleBuilder(run_step, rc.StepsRule["sort"], sort_func)
+		sort_dag := [][]string{
+			{},
+			{"predict"},
+		}
+		execute.InitRuleDag(run_step, sort_dag)
+		run_step++
 	}
-	execute.InitRuleBuilder(2, sort_rule, sort_func)
-	user_data_dag := [][]string{
-		{},
-		{"test_set_user"},
-		{"get_user_profile"},
-	}
-	execute.InitRuleDag(0, user_data_dag)
-	recall_dag := [][]string{
-		{},
-		{"test_set_group"},
-		{"recall_i2i"},
-		{"merge"},
-	}
-	execute.InitRuleDag(1, recall_dag)
-	sort_dag := [][]string{
-		{},
-		{"predict"},
-	}
-	execute.InitRuleDag(2, sort_dag)
 
 	execute.ExecuteDag()
 
@@ -107,4 +97,5 @@ func main() {
 
 	jsonData2, _ := json.Marshal(rc.Groups)
 	logrus.Infof("lmx_test group_gids : %s", jsonData2)
+	logrus.Infof("ALL COST %d ms", time.Since(start).Milliseconds())
 }
