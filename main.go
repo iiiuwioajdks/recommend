@@ -61,10 +61,12 @@ func main() {
 
 	if rc.Steps["recall"] {
 		recall_func := map[string]interface{}{
-			"rc":         rc,
-			"println":    print,
-			"set_group":  recall_group_exec.TetsSetGroup,
-			"recall_i2i": recall_group_exec.GetGroupI2I,
+			"rc":              rc,
+			"println":         print,
+			"set_group":       recall_group_exec.TetsSetGroup,
+			"recall_i2i":      recall_group_exec.GetGroupI2I,
+			"recall_love_tag": recall_group_exec.RecallLoveTagRetriever,
+			"recall_merge":    recall_group_exec.RecallMerge,
 		}
 		execute.InitRuleBuilder(run_step, rc.StepsRule["recall"], recall_func)
 		recall_dag := [][]string{
@@ -96,7 +98,8 @@ func main() {
 	jsonData, _ := json.Marshal(rc.UserProfile)
 	logrus.Infof("lmx_test user_profile : %s", jsonData)
 
-	jsonData2, _ := json.Marshal(rc.Groups)
+	jsonData2,
+		_ := json.Marshal(rc.Groups)
 	logrus.Infof("lmx_test group_gids : %s", jsonData2)
 	logrus.Infof("ALL COST %d ms", time.Since(start).Milliseconds())
 }

@@ -1,10 +1,11 @@
 rule "test_set_group"
 begin
-set_group(1, "篮球")
-set_group(2, "游戏")
-set_group(3, "游泳")
-set_group(4, "篮球")
-set_group(5, "计算机")
+set_group(6, "后端")
+set_group(7, "前端")
+set_group(8, "前端")
+set_group(9, "网络")
+set_group(10, "推荐系统")
+set_group(10, "后端")
 end
 
 rule "recall_i2i"
@@ -12,12 +13,12 @@ begin
 recall_i2i(rc)
 end
 
-rule "recall_by_tag"
+rule "recall_love_tag"
 begin
-recall_by_tag(rc)
+recall_love_tag(rc)
 end
 
 rule "merge"
 begin
-println("run recall merge")
+recall_merge(rc)
 end

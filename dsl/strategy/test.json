@@ -5,6 +5,7 @@
         "sort":false
     },
     "recall_reasons": [
-        "recall_i2i"
+        "recall_i2i",
+        "recall_love_tag"
     ]
 }

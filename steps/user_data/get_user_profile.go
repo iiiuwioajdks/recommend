@@ -6,21 +6,22 @@ import (
 	"recommend/tools/mysql"
 	redis_client "recommend/tools/redis"
 	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
 
 func TestSetUser(uid int64) {
 	user := data.UserProfile{
-		Name:   "lmx",
-		Addr:   "广东",
-		Age:    20,
-		Gender: 0,
-		Uid:    uid,
+		Name:     "lmx",
+		Addr:     "广东",
+		Age:      20,
+		Gender:   0,
+		Uid:      uid,
+		LoveTags: []string{"后端", "推荐系统"},
 		UA: data.UserAction{
 			LoveGids: []int64{1, 5},
 			HateGids: []int64{},
-			LoveTags: []string{"篮球", "计算机"},
 		},
 	}
 	// ua set redis
@@ -38,7 +39,8 @@ func TestSetUser(uid int64) {
 			name VARCHAR(50) NOT NULL,
 			addr VARCHAR(100) NOT NULL,
 			age INT NOT NULL,
-			gender INT NOT NULL
+			gender INT NOT NULL,
+			love_tags VARCHAR(255)
 		)
 	`
 
@@ -47,10 +49,11 @@ func TestSetUser(uid int64) {
 		panic(err.Error())
 	}
 	insertQuery := `
-		INSERT INTO user_profiles (uid, name, addr, age, gender)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO user_profiles (uid, name, addr, age, gender, love_tags)
+		VALUES (?, ?, ?, ?, ?, ?)
 	`
-	mysql.UserMysqlClient.Exec(insertQuery, user.Uid, user.Name, user.Addr, user.Age, user.Gender)
+	loveTagStr := strings.Join(user.LoveTags, ",")
+	mysql.UserMysqlClient.Exec(insertQuery, user.Uid, user.Name, user.Addr, user.Age, user.Gender, loveTagStr)
 }
 
 func GetUserProfileUA(rc *data.RequestContext, uid int64) {
@@ -64,8 +67,10 @@ func GetUserProfileUA(rc *data.RequestContext, uid int64) {
 }
 
 func GetUserProfileINFO(rc *data.RequestContext, uid int64) {
-	query := "SELECT uid, name, addr, age, gender FROM user_profiles where uid=?"
-	err := mysql.UserMysqlClient.QueryRow(query, uid).Scan(&rc.UserProfile.Uid, &rc.UserProfile.Name, &rc.UserProfile.Addr, &rc.UserProfile.Age, &rc.UserProfile.Gender)
+	query := "SELECT uid, name, addr, age, gender,love_tags FROM user_profiles where uid=?"
+	love_tags := ""
+	err := mysql.UserMysqlClient.QueryRow(query, uid).Scan(&rc.UserProfile.Uid, &rc.UserProfile.Name, &rc.UserProfile.Addr, &rc.UserProfile.Age, &rc.UserProfile.Gender, &love_tags)
+	rc.UserProfile.LoveTags = strings.Split(love_tags, ",")
 	if err != nil {
 		logrus.Errorf("GetUserProfile mysql query err %s", err.Error())
 	}
